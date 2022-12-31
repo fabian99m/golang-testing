@@ -1,63 +1,55 @@
 package handler
 
 import (
-	"dbtest/model"
-	"dbtest/repository"
-	"dbtest/domain/mapper"
-	"dbtest/domain/dto"
-
-	"log"
 	"net/http"
 	"strconv"
+
+	"dbtest/domain/dto"
+	"dbtest/model"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetAllHeros(c *gin.Context) {
-	log.Println("GetAllHeros handler")
-	var heros []model.Hero
-
-	repository.GetAll(&heros)
-
-	c.JSON(http.StatusOK, dto.ResponseDto{Codigo: "1000", Mensaje: "Consulta exitosa", Data: mapper.ToHerosDto(heros)})
+type HeroHandler struct {
+	usecase model.HeroUseCase
 }
 
-func GetHeroById(c *gin.Context) {
-	log.Println("GetHeroById handler")
+func NewHeroHandler(router *gin.RouterGroup, usecase model.HeroUseCase) {
+	heroHandler := &HeroHandler{
+		usecase: usecase,
+	}
 
+	router.GET("/heros", heroHandler.GetAll)
+	router.GET("/heros/:id", heroHandler.GetHeroById)
+	router.POST("/heros", heroHandler.SaveHero)
+}
+
+func (h *HeroHandler) GetAll(c *gin.Context) {
+	response := h.usecase.GetAllHeros()
+	c.JSON(response.Status, response)
+}
+
+func (h *HeroHandler) GetHeroById(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ResponseDto{Codigo: "1001", Mensaje: "Revisar formato de Id de entrada",})
+		c.JSON(http.StatusBadRequest, dto.ResponseDto{Codigo: "1001", Mensaje: "Revisar formato de Id de entrada"})
 		return
 	}
 
-	var hero model.Hero
-	if result := repository.GetById(id, &hero); result.RowsAffected == 0 {
-		c.Status(http.StatusNotFound)
-		return
-	}
+	response := h.usecase.GetHeroById(id)
 
-	c.JSON(http.StatusOK, dto.ResponseDto{Codigo: "1000", Mensaje: "Consulta exitosa", Data: mapper.ToHeroDto(hero)})
+	c.JSON(response.Status, response)
 }
 
-func SaveHero(c *gin.Context) {
-	log.Println("SaveHero handler")
-
+func (h *HeroHandler) SaveHero(c *gin.Context) {
 	var newHero dto.HeroDto
+
 	if err := c.BindJSON(&newHero); err != nil {
-		log.Panic(err)
+		c.Status(http.StatusBadRequest)
 		return
 	}
 
-	hero, err := mapper.ToHero(newHero)
-
-	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ResponseDto{ Codigo: "1001", Mensaje: "Error convirtiendo fecha", })
-		return
-	}
-
-	repository.Save(&hero)
-
-	c.JSON(http.StatusCreated, dto.ResponseDto{Codigo: "1000", Mensaje: "Hero creado",})
+	response := h.usecase.SaveHero(newHero)
+	c.JSON(response.Status, response)
 }

@@ -3,18 +3,26 @@ package main
 import (
 	"dbtest/db"
 	"dbtest/handler"
+	"dbtest/model"
+	"dbtest/repository"
+	"dbtest/usecase"
+	"log"
 
 	"github.com/gin-gonic/gin"
 )
 
+func initApp() model.HeroUseCase {
+	dbConnection := db.NewDbConnection()
+	heroRespository := repository.NewHeroRespository(dbConnection)
+	return usecase.NewHeroUseCase(heroRespository)
+}
+
 func main() {
-	r := gin.Default()
+	useCase := initApp()
+	router := gin.Default()
+	api := router.Group("/v1")
 
-	db.Connect()
+	handler.NewHeroHandler(api, useCase)
 
-	r.GET("/heros", handler.GetAllHeros)
-	r.GET("/heros/:id", handler.GetHeroById)
-	r.POST("/heros", handler.SaveHero)
-
-	r.Run("localhost:3000")
+	log.Panic(router.Run("localhost:3000"))
 }

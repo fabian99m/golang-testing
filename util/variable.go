@@ -1,8 +1,8 @@
 package util
 
 import (
+	"github.com/joho/godotenv"
 	"os"
-	"github.com/joho/godotenv"	
 )
 
 func GetVariable(key string) string {
@@ -12,5 +12,5 @@ func GetVariable(key string) string {
 		panic("Error loading .env file")
 	}
 
-	return os.Getenv(key);
+	return os.Getenv(key)
 }

@@ -14,43 +14,48 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-var Connection *gorm.DB
-
 var (
 	host      = util.GetVariable("BD_HOST")
 	port      = util.GetVariable("BD_PORT")
 	user      = util.GetVariable("BD_USERNAME")
 	password  = util.GetVariable("BD_PASSWORD")
 	dbname    = util.GetVariable("BD_NAME")
-	bd_schema = util.GetVariable("BD_ESQUEMA")+"."
+	bd_schema = util.GetVariable("BD_ESQUEMA") + "."
 )
 
-func Connect() {
-	var err error
+func NewDbConnection() *gorm.DB {
+	return connect()
+}
+
+func connect() *gorm.DB {
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-	Connection, err = gorm.Open(postgres.Open(psqlInfo), &gorm.Config{
+	Connection, err := gorm.Open(postgres.Open(psqlInfo), &gorm.Config{
 		Logger: getLogger(),
 		NamingStrategy: schema.NamingStrategy{
-			TablePrefix: bd_schema,
+			TablePrefix:   bd_schema,
 			SingularTable: true,
 		},
 	})
 
-	Connection.AutoMigrate(&model.Hero{})
-
 	if err != nil {
 		panic("Failed to connect database")
 	}
+
+	if err = Connection.AutoMigrate(&model.Hero{}); err != nil {
+		panic("Failed to database migratioon")
+	}
+
+	return Connection
 }
 
 func getLogger() logger.Interface {
 	return logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags),
 		logger.Config{
-			SlowThreshold: time.Second,
-			LogLevel: logger.Info,
-			IgnoreRecordNotFoundError: true, 
-			Colorful: true,
+			SlowThreshold:             time.Second,
+			LogLevel:                  logger.Info,
+			IgnoreRecordNotFoundError: true,
+			Colorful:                  true,
 		},
 	)
 }
