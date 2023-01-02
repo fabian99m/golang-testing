@@ -1,12 +1,12 @@
 package usecase
 
 import (
+	"dbtest/domain/dto"
+	"dbtest/model"
 	"net/http"
 	"os"
 	"testing"
-
-	"dbtest/domain/dto"
-	"dbtest/model"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -29,18 +29,29 @@ func TestGetHeroById(test *testing.T) {
 	testCases := []struct {
 		name     string
 		id       int
+		hero     model.Hero
 		rows     int64
 		expected dto.ResponseDto
 	}{
 		{
-			name:     "TestGetHeroById Ok",
-			id:       1,
+			name: "TestGetHeroById Ok",
+			id:   1,
+			hero: model.Hero{
+				Id:         2,
+				Name:       "test",
+				CreateDate: time.Time{},
+			},
 			rows:     int64(1),
 			expected: dto.ResponseDto{Status: http.StatusOK, Codigo: "1000", Mensaje: "Consulta exitosa", Data: dto.HeroDto{}},
 		},
 		{
-			name:     "TestGetHeroById Not Found",
-			id:       111,
+			name: "TestGetHeroById Not Found",
+			id:   111,
+			hero: model.Hero{
+				Id:         2,
+				Name:       "test",
+				CreateDate: time.Time{},
+			},
 			rows:     int64(0),
 			expected: dto.ResponseDto{Status: http.StatusNotFound, Codigo: "1003", Mensaje: "Consulta exitosa", Data: dto.HeroDto{}},
 		},
@@ -50,7 +61,7 @@ func TestGetHeroById(test *testing.T) {
 		tc := testCases[i]
 
 		test.Run(tc.name, func(testCase *testing.T) {
-			mockRepo.On("GetById", tc.id, mock.Anything).Return(tc.rows).Once()
+			mockRepo.On("GetById", tc.id, mock.Anything).Return(tc.hero, tc.rows).Once()
 			res := heroUsecase.GetHeroById(tc.id)
 
 			assert.NotNil(testCase, res)
@@ -64,13 +75,21 @@ func TestGetAll(test *testing.T) {
 
 	testCases := []struct {
 		name     string
+		heros    []model.Hero
 		rows     int64
 		expected dto.ResponseDto
 	}{
 		{
 			name:     "TestGetAll Ok",
+			heros:    []model.Hero{{Id: 1, Name: "fa", CreateDate: time.Now()}, {Id: 2, Name: "test", CreateDate: time.Time{}}},
 			rows:     int64(1),
-			expected: dto.ResponseDto{Status: http.StatusOK, Codigo: "1000", Mensaje: "Consulta exitosa", Data: []dto.HeroDto{}},
+			expected: dto.ResponseDto{Status: http.StatusOK, Codigo: "1000", Mensaje: "Consulta exitosa"},
+		},
+		{
+			name:     "TestGetAll Empty",
+			heros:    []model.Hero{},
+			rows:     int64(1),
+			expected: dto.ResponseDto{Status: http.StatusOK, Codigo: "1000", Mensaje: "Consulta exitosa"},
 		},
 	}
 
@@ -78,10 +97,11 @@ func TestGetAll(test *testing.T) {
 		tc := testCases[i]
 
 		test.Run(tc.name, func(testCase *testing.T) {
-			mockRepo.On("GetAll", mock.Anything).Return(tc.rows).Once()
+			mockRepo.On("GetAll", mock.Anything).Return(tc.heros, tc.rows).Once()
 			res := heroUsecase.GetAllHeros()
 
-			assert.NotNil(testCase, res)
+			assert.NotNil(testCase, res.Data.([]dto.HeroDto))
+			assert.Equal(testCase, len(res.Data.([]dto.HeroDto)), len(tc.heros))
 			assert.Equal(testCase, tc.expected.Status, res.Status, "Codigos deben ser iguales...")
 		})
 	}
@@ -132,13 +152,14 @@ type mockRepository struct {
 	mock.Mock
 }
 
-func (m *mockRepository) GetById(id int, dest *model.Hero) int64 {
-	args := m.Called(id, dest)
-	return args.Get(0).(int64)
+func (m *mockRepository) GetById(id int) (model.Hero, int64) {
+	args := m.Called(id)
+	return args.Get(0).(model.Hero), args.Get(1).(int64)
 }
 
-func (m *mockRepository) GetAll(dest *[]model.Hero) {
-	m.Called(dest)
+func (m *mockRepository) GetAll() ([]model.Hero, int64) {
+	args := m.Called()
+	return args.Get(0).([]model.Hero), args.Get(1).(int64)
 }
 
 func (m *mockRepository) Save(dest *model.Hero) int64 {

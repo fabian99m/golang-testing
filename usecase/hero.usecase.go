@@ -20,8 +20,8 @@ func NewHeroUseCase(repository model.HeroDbInteractor) model.HeroUseCase {
 func (h *HeroUseCase) GetAllHeros() dto.ResponseDto {
 	log.Println("GetAllHeros handler")
 
-	var heros []model.Hero
-	h.repository.GetAll(&heros)
+	//var heros []model.Hero
+	heros, _ := h.repository.GetAll()
 
 	return dto.ResponseDto{Status: http.StatusOK, Codigo: "1000", Mensaje: "Consulta exitosa", Data: mapper.ToHerosDto(heros)}
 }
@@ -29,8 +29,8 @@ func (h *HeroUseCase) GetAllHeros() dto.ResponseDto {
 func (h *HeroUseCase) GetHeroById(id int) dto.ResponseDto {
 	log.Println("GetHeroById handler")
 
-	var hero model.Hero
-	if RowsAffected := h.repository.GetById(id, &hero); RowsAffected == 0 {
+	hero, RowsAffected := h.repository.GetById(id)
+	if RowsAffected == 0 {
 		return dto.ResponseDto{Status: http.StatusNotFound, Codigo: "1001", Mensaje: "Hero no encontrado"}
 	}
 

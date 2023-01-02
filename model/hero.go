@@ -12,9 +12,9 @@ type Hero struct {
 }
 
 type HeroDbInteractor interface {
-	GetAll(dest *[]Hero)
-	GetById(id int, dest *Hero) int64
-	Save(dest *Hero) int64
+	GetAll() ([]Hero, int64)
+	GetById(id int) (Hero, int64)
+	Save(hero *Hero) int64
 }
 
 type HeroUseCase interface {
