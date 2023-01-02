@@ -13,8 +13,8 @@ import (
 
 func initApp() model.HeroUseCase {
 	dbConnection := db.NewDbConnection()
-	heroRespository := repository.NewHeroRespository(dbConnection)
-	return usecase.NewHeroUseCase(heroRespository)
+	heroRepository := repository.NewHeroRespository(dbConnection)
+	return usecase.NewHeroUseCase(heroRepository)
 }
 
 func main() {

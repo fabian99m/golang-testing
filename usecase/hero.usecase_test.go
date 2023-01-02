@@ -3,6 +3,7 @@ package usecase
 import (
 	"dbtest/domain/dto"
 	"dbtest/model"
+	"dbtest/model/mocks"
 	"net/http"
 	"os"
 	"testing"
@@ -12,11 +13,11 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-var mockRepo *mockRepository
+var mockRepo *mocks.HeroDbInteractor
 var heroUsecase model.HeroUseCase
 
 func TestMain(m *testing.M) {
-	mockRepo = new(mockRepository)
+	mockRepo = new(mocks.HeroDbInteractor)
 	heroUsecase = NewHeroUseCase(mockRepo)
 
 	runTests := m.Run()
@@ -45,13 +46,9 @@ func TestGetHeroById(test *testing.T) {
 			expected: dto.ResponseDto{Status: http.StatusOK, Codigo: "1000", Mensaje: "Consulta exitosa", Data: dto.HeroDto{}},
 		},
 		{
-			name: "TestGetHeroById Not Found",
-			id:   111,
-			hero: model.Hero{
-				Id:         2,
-				Name:       "test",
-				CreateDate: time.Time{},
-			},
+			name:     "TestGetHeroById Not Found",
+			id:       111,
+			hero:     model.Hero{Id: 2, Name: "test", CreateDate: time.Time{}},
 			rows:     int64(0),
 			expected: dto.ResponseDto{Status: http.StatusNotFound, Codigo: "1003", Mensaje: "Consulta exitosa", Data: dto.HeroDto{}},
 		},
@@ -146,23 +143,4 @@ func TestSaveHero(test *testing.T) {
 			assert.Equal(testCase, tc.expected.Status, res.Status, "Codigos deben ser iguales...")
 		})
 	}
-}
-
-type mockRepository struct {
-	mock.Mock
-}
-
-func (m *mockRepository) GetById(id int) (model.Hero, int64) {
-	args := m.Called(id)
-	return args.Get(0).(model.Hero), args.Get(1).(int64)
-}
-
-func (m *mockRepository) GetAll() ([]model.Hero, int64) {
-	args := m.Called()
-	return args.Get(0).([]model.Hero), args.Get(1).(int64)
-}
-
-func (m *mockRepository) Save(dest *model.Hero) int64 {
-	args := m.Called(dest)
-	return args.Get(0).(int64)
 }

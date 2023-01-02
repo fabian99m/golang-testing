@@ -3,9 +3,11 @@ package handler
 import (
 	"bytes"
 	"dbtest/domain/dto"
+	"dbtest/model/mocks"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 
 	"testing"
 
@@ -17,6 +19,15 @@ import (
 func SetUpRouter() (*gin.Engine, *gin.RouterGroup) {
 	server := gin.Default()
 	return server, server.Group("v1")
+}
+
+var useCaseMock *mocks.HeroUseCase
+
+func TestMain(m *testing.M) {
+	useCaseMock = new(mocks.HeroUseCase)
+
+	runTests := m.Run()
+	os.Exit(runTests)
 }
 
 func TestGetAll(test *testing.T) {
@@ -36,12 +47,11 @@ func TestGetAll(test *testing.T) {
 		tc := testCases[i]
 
 		test.Run(tc.name, func(testCase *testing.T) {
-			useCaseMock := new(useCaseMockRepository)
 			useCaseMock.On("GetAllHeros").Return(dto.ResponseDto{Status: http.StatusOK}).Once()
 
 			server, api := SetUpRouter()
-
 			NewHeroHandler(api, useCaseMock)
+
 			req, _ := http.NewRequest(http.MethodGet, "/v1/heros", nil)
 			w := httptest.NewRecorder()
 			server.ServeHTTP(w, req)
@@ -73,8 +83,6 @@ func TestGetHeroById(test *testing.T) {
 	for i := range testCases {
 		tc := testCases[i]
 		test.Run(tc.name, func(testCase *testing.T) {
-
-			useCaseMock := new(useCaseMockRepository)
 			useCaseMock.On("GetHeroById", 1).Return(dto.ResponseDto{Status: http.StatusOK}).Once()
 
 			server, api := SetUpRouter()
@@ -112,7 +120,6 @@ func TestSaveHero(test *testing.T) {
 		tc := testCases[i]
 
 		test.Run(tc.name, func(testCase *testing.T) {
-			useCaseMock := new(useCaseMockRepository)
 			useCaseMock.On("SaveHero", mock.Anything).Return(dto.ResponseDto{Status: http.StatusCreated}).Once()
 
 			server, api := SetUpRouter()
@@ -132,23 +139,4 @@ func TestSaveHero(test *testing.T) {
 func getJson(dest any) []byte {
 	s, _ := json.Marshal(dest)
 	return s
-}
-
-type useCaseMockRepository struct {
-	mock.Mock
-}
-
-func (m *useCaseMockRepository) GetAllHeros() dto.ResponseDto {
-	args := m.Called()
-	return args.Get(0).(dto.ResponseDto)
-}
-
-func (m *useCaseMockRepository) GetHeroById(id int) dto.ResponseDto {
-	args := m.Called(id)
-	return args.Get(0).(dto.ResponseDto)
-}
-
-func (m *useCaseMockRepository) SaveHero(hero dto.HeroDto) dto.ResponseDto {
-	args := m.Called(hero)
-	return args.Get(0).(dto.ResponseDto)
 }
