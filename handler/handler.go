@@ -33,7 +33,8 @@ func (h *HeroHandler) GetHeroById(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, dto.ResponseDto{Codigo: "1001", Mensaje: "Revisar formato de Id de entrada"})
+		//c.JSON(http.StatusBadRequest, dto.ResponseDto{Codigo: "1001", Mensaje: "Revisar formato de Id de entrada"})
+		c.AbortWithError(401, ErrBadRequest)
 		return
 	}
 

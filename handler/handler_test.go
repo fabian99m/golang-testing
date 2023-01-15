@@ -75,7 +75,7 @@ func TestGetHeroById(test *testing.T) {
 			id:             "1",
 		}, {
 			name:           "TestGetHeroById Error Id",
-			expectedStatus: 400,
+			expectedStatus: 401,
 			id:             "aaaaa",
 		},
 	}

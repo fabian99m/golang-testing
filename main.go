@@ -3,6 +3,7 @@ package main
 import (
 	"dbtest/db"
 	"dbtest/handler"
+	"dbtest/handler/middleware"
 	"dbtest/model"
 	"dbtest/repository"
 	"dbtest/usecase"
@@ -20,6 +21,7 @@ func initApp() model.HeroUseCase {
 func main() {
 	useCase := initApp()
 	router := gin.Default()
+	router.Use(middleware.ErrorHandler)
 	api := router.Group("/v1")
 
 	handler.NewHeroHandler(api, useCase)
