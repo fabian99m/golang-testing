@@ -50,7 +50,7 @@ func TestGetAll(test *testing.T) {
 			useCaseMock.On("GetAllHeros").Return(dto.ResponseDto{Status: http.StatusOK}).Once()
 
 			server, api := SetUpRouter()
-			NewHeroHandler(api, useCaseMock)
+			NewHandler(api, useCaseMock)
 
 			req, _ := http.NewRequest(http.MethodGet, "/v1/heros", nil)
 			w := httptest.NewRecorder()
@@ -87,7 +87,7 @@ func TestGetHeroById(test *testing.T) {
 
 			server, api := SetUpRouter()
 
-			NewHeroHandler(api, useCaseMock)
+			NewHandler(api, useCaseMock)
 			req, _ := http.NewRequest(http.MethodGet, "/v1/heros/"+tc.id, nil)
 			w := httptest.NewRecorder()
 			server.ServeHTTP(w, req)
@@ -124,7 +124,7 @@ func TestSaveHero(test *testing.T) {
 
 			server, api := SetUpRouter()
 
-			NewHeroHandler(api, useCaseMock)
+			NewHandler(api, useCaseMock)
 			req, _ := http.NewRequest(http.MethodPost, "/v1/heros", bytes.NewBuffer(tc.dto))
 
 			w := httptest.NewRecorder()

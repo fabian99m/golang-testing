@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	h "dbtest/handler"
+	"dbtest/domain/dto"
 	"log"
 	"net/http"
 
@@ -12,18 +12,12 @@ func ErrorHandler(c *gin.Context) {
 	c.Next()
 
 	for _, err := range c.Errors {
-		switch err.Err {
-		case h.ErrNotFound:
-			log.Println("h.ErrNotFound")
-			c.JSON(-1, gin.H{"error": h.ErrNotFound.Error()})
-		case h.ErrBadRequest:
-			log.Println("h.ErrBadRequest")
-			c.JSON(-1, gin.H{"error en entrada": h.ErrNotFound.Error()})
+		switch e := err.Err.(type) {
+		case dto.ResponseDto:
+			c.AbortWithStatusJSON(e.Status, e)
 		default:
-			log.Println("default error")
-			c.JSON(-1, gin.H{"error inesperado": "test"})
+			log.Println("default error", e)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error inesperado": "test"})
 		}
 	}
-
-	c.JSON(http.StatusInternalServerError, "")
 }

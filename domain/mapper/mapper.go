@@ -3,7 +3,6 @@ package mapper
 import (
 	"dbtest/domain/dto"
 	"dbtest/model"
-	"log"
 	"time"
 )
 
@@ -24,12 +23,7 @@ func ToHerosDto(models []model.Hero) []dto.HeroDto {
 }
 
 func ToHero(dto dto.HeroDto) (model.Hero, error) {
-	date, err := time.Parse("2006-01-02", dto.CreateDate)
-
-	if err != nil {
-		log.Println("Error convirtiendo fecha...")
-		return model.Hero{}, err
-	}
+	date := time.Now()
 
 	return model.Hero{Name: dto.Name, CreateDate: date}, nil
 }

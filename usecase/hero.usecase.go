@@ -4,6 +4,7 @@ import (
 	"dbtest/model"
 	"log"
 	"net/http"
+	"time"
 
 	"dbtest/domain/dto"
 	"dbtest/domain/mapper"
@@ -39,6 +40,8 @@ func (h *HeroUseCase) GetHeroById(id int) dto.ResponseDto {
 
 func (h *HeroUseCase) SaveHero(newHero dto.HeroDto) dto.ResponseDto {
 	log.Println("SaveHero handler")
+
+	newHero.CreateDate = time.Now().Format("2006-01-02")
 
 	hero, err := mapper.ToHero(newHero)
 

@@ -24,7 +24,7 @@ func main() {
 	router.Use(middleware.ErrorHandler)
 	api := router.Group("/v1")
 
-	handler.NewHeroHandler(api, useCase)
+	handler.NewHandler(api, useCase)
 
 	log.Panic(router.Run("localhost:3000"))
 }
