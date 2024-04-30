@@ -16,16 +16,23 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-type FileUseCase struct{}
+type FileUseCase struct{
+	bucketName string
+	s3Client *s3.Client
+}
 
-func NewFileUseCase() model.FileUseCase { return &FileUseCase{} }
+func NewFileUseCase(bucketName string) model.FileUseCase { 
+	if (bucketName == "") {
+		panic("bucketName requerido...")
+	}
+	return &FileUseCase{bucketName: bucketName, s3Client: buildS3Client()}
+}
 
-func (f *FileUseCase) GetFile(key string) dto.FileResponseDto {
+func (usecase *FileUseCase) GetFile(key string) dto.FileResponseDto {
 	log.Println("Inicia descarga de archivo...");
-	
-	s3Client := buildS3Client();
-    objectOutput, objectOutputError := s3Client.GetObject(context.Background(), &s3.GetObjectInput{
-		Bucket: aws.String("testbucket"),
+
+    objectOutput, objectOutputError := usecase.s3Client.GetObject(context.Background(), &s3.GetObjectInput{
+		Bucket: aws.String(usecase.bucketName),
 		Key: aws.String(key),
 	})
 
@@ -39,46 +46,43 @@ func (f *FileUseCase) GetFile(key string) dto.FileResponseDto {
 	return dto.NewFileResponseDto(objectOutput.Body, *objectOutput.ContentType, *objectOutput.ContentLength);
 }
 
-func (f *FileUseCase) SaveFile(file *multipart.FileHeader) string {
+func (usecase *FileUseCase) SaveFile(file *multipart.FileHeader) string {
 	multipartFile, multipartFileError := file.Open()
 	if multipartFileError != nil {
 		log.Println("Error abriendo multipartFile...", multipartFileError)
-		return ""
+		return "";
 	}
 
 	defer multipartFile.Close()
 
 	fileContent, fileContentError := io.ReadAll(multipartFile)
-
 	if fileContentError != nil {
 		log.Println("Error leyendo todos los bytes de multipartFile", fileContentError)
-		return ""
+		return "";
 	}
 
 	contentType := http.DetectContentType(fileContent)
 	log.Println("File Conten-Type:", contentType)
 
-	fileName := getFileName(file.Filename)
+	fileName := generateFileName(&file.Filename)
 	log.Println("File name:", fileName)
 
-	client := buildS3Client()
-	_, putError := client.PutObject(context.Background(), &s3.PutObjectInput{
+	_, putError := usecase.s3Client.PutObject(context.Background(), &s3.PutObjectInput{
 		Body:        bytes.NewReader(fileContent),
-		Bucket:      aws.String("testbucket"),
+		Bucket:      aws.String(usecase.bucketName),
 		Key:         &fileName,
 		ContentType: &contentType,
 	})
-
 	if putError != nil {
 		log.Println("Error guardando archivo en S3...", putError)
 		return ""
 	}
 
-	return fileName
+	return fileName;
 }
 
-func getFileName(name string) string {
-	return name + time.Now().Format("2006-01-02 15:04:05")
+func generateFileName(name *string) string {
+	return *name + time.Now().Format("2006-01-02 15:04:05")
 }
 
 func buildS3Client() *s3.Client {

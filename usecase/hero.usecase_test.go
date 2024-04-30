@@ -4,6 +4,7 @@ import (
 	"dbtest/domain/dto"
 	"dbtest/model"
 	"dbtest/model/mocks"
+
 	"net/http"
 	"os"
 	"testing"
@@ -11,15 +12,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	. "github.com/ovechkin-dm/mockio/mock"
 )
 
 var mockRepo *mocks.HeroDbInteractor
 var heroUsecase model.HeroUseCase
+var HeroDbInteractorMock model.HeroDbInteractor
 
 func TestMain(m *testing.M) {
-	mockRepo = new(mocks.HeroDbInteractor)
-	heroUsecase = NewHeroUseCase(mockRepo)
-
+	heroUsecase = NewHeroUseCase(HeroDbInteractorMock)
 	runTests := m.Run()
 	os.Exit(runTests)
 }
@@ -58,11 +60,16 @@ func TestGetHeroById(test *testing.T) {
 		tc := testCases[i]
 
 		test.Run(tc.name, func(testCase *testing.T) {
-			mockRepo.On("GetById", tc.id, mock.Anything).Return(tc.hero, tc.rows).Once()
-			res := heroUsecase.GetHeroById(tc.id)
+			SetUp(testCase)
+			mockint := Any[int]()
+			HeroDbInteractorMock = Mock[model.HeroDbInteractor]()
+			heroUsecase = NewHeroUseCase(HeroDbInteractorMock)
+			When(HeroDbInteractorMock.GetById(mockint)).ThenReturn(tc.hero, tc.rows)
 
-			assert.NotNil(testCase, res)
-			assert.Equal(testCase, tc.expected.Status, res.Status, "Codigos deben ser iguales...")
+			response := heroUsecase.GetHeroById(tc.id)
+
+			assert.NotNil(testCase, response)
+			assert.Equal(testCase, tc.expected.Status, response.Status, "Codigos deben ser iguales...")
 		})
 	}
 }
@@ -122,12 +129,6 @@ func TestSaveHero(test *testing.T) {
 			name:     "TestSaveHero ErrorGeneric",
 			dto:      dto.HeroDto{Name: "test", CreateDate: "2022-12-12"},
 			rows:     int64(0),
-			expected: dto.ResponseDto{Status: http.StatusInternalServerError, Codigo: "1002", Mensaje: "Error", Data: []dto.HeroDto{}},
-		},
-		{
-			name:     "TestSaveHero ErrorFecha",
-			dto:      dto.HeroDto{Name: "test", CreateDate: "2022/12-12"},
-			rows:     int64(1),
 			expected: dto.ResponseDto{Status: http.StatusInternalServerError, Codigo: "1002", Mensaje: "Error", Data: []dto.HeroDto{}},
 		},
 	}

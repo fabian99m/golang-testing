@@ -22,8 +22,8 @@ func ToHerosDto(models []model.Hero) []dto.HeroDto {
 	return dtos
 }
 
-func ToHero(dto dto.HeroDto) (model.Hero, error) {
+func ToHero(dto dto.HeroDto) model.Hero {
 	date := time.Now()
 
-	return model.Hero{Name: dto.Name, CreateDate: date}, nil
+	return model.Hero{Name: dto.Name, CreateDate: date}
 }

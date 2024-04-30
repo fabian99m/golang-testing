@@ -12,7 +12,7 @@ type Hero struct {
 }
 
 type HeroDbInteractor interface {
-	GetAll() ([]Hero, int64)
+    GetAll() ([]Hero, int64)
 	GetById(id int) (Hero, int64)
 	Save(hero *Hero) int64
 }

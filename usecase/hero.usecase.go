@@ -11,17 +11,16 @@ import (
 )
 
 type HeroUseCase struct {
-	repository model.HeroDbInteractor
+	repository *model.HeroDbInteractor
 }
 
-func NewHeroUseCase(repository model.HeroDbInteractor) model.HeroUseCase {
+func NewHeroUseCase(repository *model.HeroDbInteractor) *HeroUseCase {
 	return &HeroUseCase{repository: repository}
 }
 
-func (h *HeroUseCase) GetAllHeros() dto.ResponseDto {
+func (h HeroUseCase) GetAllHeros() dto.ResponseDto {
 	log.Println("GetAllHeros handler")
 
-	//var heros []model.Hero
 	heros, _ := h.repository.GetAll()
 
 	return dto.ResponseDto{Status: http.StatusOK, Codigo: "1000", Mensaje: "Consulta exitosa", Data: mapper.ToHerosDto(heros)}
@@ -43,11 +42,7 @@ func (h *HeroUseCase) SaveHero(newHero dto.HeroDto) dto.ResponseDto {
 
 	newHero.CreateDate = time.Now().Format("2006-01-02")
 
-	hero, err := mapper.ToHero(newHero)
-
-	if err != nil {
-		return dto.ResponseDto{Status: http.StatusInternalServerError, Codigo: "1003", Mensaje: "Error convirtiendo fecha"}
-	}
+	hero := mapper.ToHero(newHero)
 
 	if RowsAffected := h.repository.Save(&hero); RowsAffected == 0 {
 		return dto.ResponseDto{Status: http.StatusInternalServerError, Codigo: "1002", Mensaje: "Error guardando hero"}

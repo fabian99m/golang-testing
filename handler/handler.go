@@ -6,8 +6,12 @@ import (
 	"net/http"
 	"strconv"
 
+	"dbtest/config"
+	util "dbtest/util"
+	"dbtest/db"
 	"dbtest/domain/dto"
 	"dbtest/model"
+	"dbtest/repository"
 	"dbtest/usecase"
 
 	"github.com/gin-gonic/gin"
@@ -18,10 +22,13 @@ type Handler struct {
 	fileUseCase model.FileUseCase
 }
 
-func NewHandler(router *gin.RouterGroup, heroUseCase model.HeroUseCase) {
+func NewHandler(router *gin.RouterGroup, cfg *config.Config) {
+	dbConnection := db.NewDbConnection(&cfg.DataBase)
+	heroRepository := repository.NewHeroRespository(dbConnection)
+
 	handler := &Handler{
-		heroUseCase: heroUseCase,
-		fileUseCase: usecase.NewFileUseCase(),
+		heroUseCase: usecase.NewHeroUseCase(heroRepository),
+		fileUseCase: usecase.NewFileUseCase(cfg.S3.Bucket),
 	}
 
 	router.GET("/heros", handler.GetAll)
@@ -36,11 +43,11 @@ func (h *Handler) UploadFile(c *gin.Context) {
 	if formFileError != nil {
 		log.Println("error abriendo multipart", formFileError)
 		c.Status(500)
-		return;
+		return
 	}
 	response := h.fileUseCase.SaveFile(formFile)
 
-	c.JSON(200, response);
+	c.JSON(200, response)
 }
 
 func (h *Handler) Download(c *gin.Context) {
@@ -51,7 +58,7 @@ func (h *Handler) Download(c *gin.Context) {
 		return
 	}
 
-	output := h.fileUseCase.GetFile(key);
+	output := h.fileUseCase.GetFile(key)
 
 	extraHeaders := map[string]string{
 		"Content-Disposition": fmt.Sprintf(`"attachment; filename="%s"`, key),
@@ -86,7 +93,7 @@ func (h *Handler) SaveHero(c *gin.Context) {
 		return
 	}
 
-	valid, fields := Validate(newHero)
+	valid, fields := util.Validate(newHero)
 
 	if !valid {
 		dto.InvalidData.Data = fields
