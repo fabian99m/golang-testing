@@ -5,8 +5,8 @@ import (
 	"dbtest/domain/dto"
 )
 
-
 type FileUseCase interface {
 	SaveFile(*multipart.FileHeader) string;
-	GetFile(string) dto.FileResponseDto;
+	GetFile(string) (*dto.FileResponseDto, error);
+	GetFiles(string) (*dto.FileResponseDto, error);
 }

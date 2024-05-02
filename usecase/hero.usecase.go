@@ -11,14 +11,14 @@ import (
 )
 
 type HeroUseCase struct {
-	repository *model.HeroDbInteractor
+	repository model.HeroDbInteractor
 }
 
-func NewHeroUseCase(repository *model.HeroDbInteractor) *HeroUseCase {
+func NewHeroUseCase(repository model.HeroDbInteractor) *HeroUseCase {
 	return &HeroUseCase{repository: repository}
 }
 
-func (h HeroUseCase) GetAllHeros() dto.ResponseDto {
+func (h *HeroUseCase) GetAllHeros() dto.ResponseDto {
 	log.Println("GetAllHeros handler")
 
 	heros, _ := h.repository.GetAll()

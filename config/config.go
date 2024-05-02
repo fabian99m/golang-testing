@@ -3,7 +3,7 @@ package config
 import (
 	util "dbtest/util"
 	"errors"
-	"io/ioutil"
+	"os"
 	"log"
 
 	"gopkg.in/yaml.v3"
@@ -28,7 +28,7 @@ type DataBase struct {
 }
 
 func ReadConf() (*Config, error) {
-	buffer, errRead := ioutil.ReadFile("config.yml")
+	buffer, errRead := os.ReadFile("config.yml")
 	if errRead != nil {
 		return nil, errRead
 	}

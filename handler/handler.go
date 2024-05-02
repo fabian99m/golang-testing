@@ -28,7 +28,7 @@ func NewHandler(router *gin.RouterGroup, cfg *config.Config) {
 
 	handler := &Handler{
 		heroUseCase: usecase.NewHeroUseCase(heroRepository),
-		fileUseCase: usecase.NewFileUseCase(cfg.S3.Bucket),
+		fileUseCase: usecase.NewFileUseCase(cfg.S3.Bucket, nil),
 	}
 
 	router.GET("/heros", handler.GetAll)
@@ -36,6 +36,7 @@ func NewHandler(router *gin.RouterGroup, cfg *config.Config) {
 	router.POST("/heros", handler.SaveHero)
 	router.POST("/upload", handler.UploadFile)
 	router.GET("/download", handler.Download)
+	router.GET("/keys", handler.Keys)
 }
 
 func (h *Handler) UploadFile(c *gin.Context) {
@@ -50,6 +51,19 @@ func (h *Handler) UploadFile(c *gin.Context) {
 	c.JSON(200, response)
 }
 
+func (h *Handler) Keys(c *gin.Context) {
+	token := c.Query("next")
+
+	keys, error := h.fileUseCase.GetFiles(token);
+
+	if (error != nil) {
+		c.Status(http.StatusInternalServerError)
+		return;
+	}
+
+	c.JSON(200, keys)
+}
+
 func (h *Handler) Download(c *gin.Context) {
 	key := c.Query("key")
 
@@ -58,7 +72,17 @@ func (h *Handler) Download(c *gin.Context) {
 		return
 	}
 
-	output := h.fileUseCase.GetFile(key)
+	output, error := h.fileUseCase.GetFile(key)
+
+	if (error != nil) {
+		c.Status(http.StatusInternalServerError)
+		return;
+	}
+
+	if output.Data == nil {
+		c.Status(http.StatusNotFound)
+		return;
+	}
 
 	extraHeaders := map[string]string{
 		"Content-Disposition": fmt.Sprintf(`"attachment; filename="%s"`, key),
