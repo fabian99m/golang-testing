@@ -2,17 +2,16 @@ package handler
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
 
-	"dbtest/config"
-	util "dbtest/util"
-	"dbtest/db"
+	"dbtest/app"
 	"dbtest/domain/dto"
 	"dbtest/model"
-	"dbtest/repository"
-	"dbtest/usecase"
+
+	util "dbtest/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,18 +21,16 @@ type Handler struct {
 	fileUseCase model.FileUseCase
 }
 
-func NewHandler(router *gin.RouterGroup, cfg *config.Config) {
-	dbConnection := db.NewDbConnection(&cfg.DataBase)
-	heroRepository := repository.NewHeroRespository(dbConnection)
-
+func NewHandler(router *gin.RouterGroup, cfg *app.AppConfig) {
 	handler := &Handler{
-		heroUseCase: usecase.NewHeroUseCase(heroRepository),
-		fileUseCase: usecase.NewFileUseCase(cfg.S3.Bucket, nil),
+		heroUseCase: cfg.HeroUseCase,
+		fileUseCase: cfg.FileUseCase,
 	}
 
 	router.GET("/heros", handler.GetAll)
 	router.GET("/heros/:id", handler.GetHeroById)
 	router.POST("/heros", handler.SaveHero)
+	
 	router.POST("/upload", handler.UploadFile)
 	router.GET("/download", handler.Download)
 	router.GET("/keys", handler.Keys)
@@ -46,7 +43,35 @@ func (h *Handler) UploadFile(c *gin.Context) {
 		c.Status(500)
 		return
 	}
-	response := h.fileUseCase.SaveFile(formFile)
+
+	if (formFile.Size == 0) {
+		log.Println("File size incorrecta", formFileError)
+		c.Status(500)
+		return
+	}
+
+	multipartFile, multipartFileError := formFile.Open()
+	if multipartFileError != nil {
+		log.Println("Error abriendo multipartFile...", multipartFileError)
+		c.Status(500)
+		return
+	}
+	
+	defer multipartFile.Close()
+	
+	fileContent, fileContentError := io.ReadAll(multipartFile)
+	if fileContentError != nil {
+		log.Println("Error leyendo todos los bytes de multipartFile", fileContentError)
+		c.Status(500)
+		return
+	}
+
+	response, er := h.fileUseCase.SaveFile(&fileContent, &formFile.Filename)
+
+	if er != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
 
 	c.JSON(200, response)
 }
@@ -54,11 +79,11 @@ func (h *Handler) UploadFile(c *gin.Context) {
 func (h *Handler) Keys(c *gin.Context) {
 	token := c.Query("next")
 
-	keys, error := h.fileUseCase.GetFiles(token);
+	keys, error := h.fileUseCase.GetFiles(token)
 
-	if (error != nil) {
+	if error != nil {
 		c.Status(http.StatusInternalServerError)
-		return;
+		return
 	}
 
 	c.JSON(200, keys)
@@ -74,7 +99,7 @@ func (h *Handler) Download(c *gin.Context) {
 
 	output, error := h.fileUseCase.GetFile(key)
 
-	if (error != nil) {
+	if error != nil {
 		c.Status(http.StatusInternalServerError)
 		return;
 	}
@@ -83,6 +108,8 @@ func (h *Handler) Download(c *gin.Context) {
 		c.Status(http.StatusNotFound)
 		return;
 	}
+	
+	defer output.Data.Close()
 
 	extraHeaders := map[string]string{
 		"Content-Disposition": fmt.Sprintf(`"attachment; filename="%s"`, key),

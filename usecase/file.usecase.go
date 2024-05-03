@@ -6,53 +6,60 @@ import (
 	"dbtest/domain/dto"
 	"dbtest/model"
 	"errors"
-	"io"
 	"log"
-	"mime/multipart"
 	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/aws/smithy-go"
 )
 
 type FileUseCase struct {
 	bucketName string
-	s3Client   *s3.Client
+	s3Client   S3API
 }
 
-func NewFileUseCase(bucketName string, s3Client  *s3.Client) model.FileUseCase {
+type S3API interface {
+	ListObjectsV2(ctx context.Context, params *s3.ListObjectsV2Input, optFns ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
+	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
+	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+}
+
+func NewFileUseCase(bucketName string, s3API S3API) model.FileUseCase {
 	if bucketName == "" {
 		panic("bucketName requerido...")
 	}
-	return &FileUseCase{bucketName: bucketName, s3Client: s3Client}
+	return &FileUseCase{bucketName: bucketName, s3Client: s3API}
 }
 
 func (usecase *FileUseCase) GetFiles(token string) (*dto.FileResponseDto, error) {
-	params := &s3.ListObjectsV2Input{
-		Bucket: &usecase.bucketName,
+	input := &s3.ListObjectsV2Input{
+		Bucket:  &usecase.bucketName,
 		MaxKeys: aws.Int32(10),
-	};
+	}
 
-	if token == "" { params.ContinuationToken = nil} else { params.ContinuationToken = &token }
+	if token == "" {
+		input.ContinuationToken = nil
+	} else {
+		input.ContinuationToken = &token
+	}
 
-	objects, listError := usecase.s3Client.ListObjectsV2(context.Background(), params)
+	output, listError := usecase.s3Client.ListObjectsV2(context.Background(), input)
 
 	if listError != nil {
 		log.Println("error obteniendo objects..", listError)
-		return nil, listError;
+		return nil, listError
 	}
 
 	var keys []string
-	for _, object := range objects.Contents {
+	for _, object := range output.Contents {
 		keys = append(keys, *object.Key)
 	}
 
 	response := &dto.FileResponseDto{Keys: keys}
-	if (objects.NextContinuationToken != nil) {
-		response.Next = *objects.NextContinuationToken;
+	if output.NextContinuationToken != nil {
+		response.Next = *output.NextContinuationToken
 	}
 
 	return response, nil
@@ -67,19 +74,13 @@ func (usecase *FileUseCase) GetFile(key string) (*dto.FileResponseDto, error) {
 	})
 
 	if getError != nil {
-		var apiErr smithy.APIError
-		if errors.As(getError, &apiErr) {
-			switch apiErr.(type) {
-			case *types.NoSuchKey:
-				log.Println("Error NoSuchKey...")
-				return &dto.FileResponseDto{}, nil
-			case *types.NoSuchBucket:
-				log.Println("Error NoSuchBucket...")
-			default:
-				log.Println("Error default...", getError)
-				return &dto.FileResponseDto{}, getError
-			}
+		log.Println("Error al descargar archivo...", getError)
+		var NoSuchKey *types.NoSuchKey
+		if errors.As(getError, &NoSuchKey) {
+			return &dto.FileResponseDto{}, nil
 		}
+
+		return nil, getError
 	}
 
 	log.Println("Fin de descarga de archivo...")
@@ -87,39 +88,26 @@ func (usecase *FileUseCase) GetFile(key string) (*dto.FileResponseDto, error) {
 	return dto.NewFileResponseDto(objectOutput.Body, *objectOutput.ContentType, *objectOutput.ContentLength), nil
 }
 
-func (usecase *FileUseCase) SaveFile(file *multipart.FileHeader) string {
-	multipartFile, multipartFileError := file.Open()
-	if multipartFileError != nil {
-		log.Println("Error abriendo multipartFile...", multipartFileError)
-		return ""
-	}
-
-	defer multipartFile.Close()
-
-	fileContent, fileContentError := io.ReadAll(multipartFile)
-	if fileContentError != nil {
-		log.Println("Error leyendo todos los bytes de multipartFile", fileContentError)
-		return ""
-	}
-
-	contentType := http.DetectContentType(fileContent)
+func (usecase *FileUseCase) SaveFile(fileContent *[]byte, name *string) (string, error) {
+	contentType := http.DetectContentType(*fileContent)
 	log.Println("File Conten-Type:", contentType)
 
-	fileName := generateFileName(&file.Filename)
+	fileName := generateFileName(name)
 	log.Println("File name:", fileName)
 
 	_, putError := usecase.s3Client.PutObject(context.Background(), &s3.PutObjectInput{
-		Body:        bytes.NewReader(fileContent),
+		Body:        bytes.NewReader(*fileContent),
 		Bucket:      aws.String(usecase.bucketName),
 		Key:         &fileName,
 		ContentType: &contentType,
 	})
+
 	if putError != nil {
 		log.Println("Error guardando archivo en S3...", putError)
-		return ""
+		return "", putError
 	}
 
-	return fileName
+	return fileName, nil
 }
 
 func generateFileName(name *string) string {

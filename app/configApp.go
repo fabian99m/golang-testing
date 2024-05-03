@@ -16,8 +16,8 @@ import (
 )
 
 type AppConfig struct {
-	heroUseCase model.HeroUseCase
-	fileUseCase model.FileUseCase
+	HeroUseCase model.HeroUseCase
+	FileUseCase model.FileUseCase
 }
 
 func NewAppConfig() *AppConfig {
@@ -26,8 +26,8 @@ func NewAppConfig() *AppConfig {
 	heroRepository := repository.NewHeroRespository(dbConnection)
 
 	return &AppConfig{
-		heroUseCase: usecase.NewHeroUseCase(heroRepository),
-		fileUseCase: usecase.NewFileUseCase(config.S3.Bucket, buildS3Client()),
+		HeroUseCase: usecase.NewHeroUseCase(heroRepository),
+		FileUseCase: usecase.NewFileUseCase(config.S3.Bucket, buildS3Client()),
 	}
 }
 

@@ -3,8 +3,8 @@ database:
   port : 5432
   username: postgres
   password: 2305
-  name: AngularBD
-  esquema: tranx
+  name: postgres
+  esquema: golang
 
 s3:
-  bucket: testbucket
+  bucket: demobucket

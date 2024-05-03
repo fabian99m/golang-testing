@@ -23,7 +23,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestGetHeroById(test *testing.T) {
-	test.Parallel()
+	//test.Parallel()
 
 	testCases := []struct {
 		name     string
@@ -68,7 +68,7 @@ func TestGetHeroById(test *testing.T) {
 }
 
 func TestGetAll(test *testing.T) {
-	test.Parallel()
+	//test.Parallel()
 
 	testCases := []struct {
 		name     string
@@ -106,7 +106,7 @@ func TestGetAll(test *testing.T) {
 }
 
 func TestSaveHero(test *testing.T) {
-	test.Parallel()
+//	test.Parallel()
 	testCases := []struct {
 		name     string
 		dto      dto.HeroDto
